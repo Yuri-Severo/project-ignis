@@ -1,38 +1,50 @@
-const express = require("express");
+import express from "express";
 
 const app = express();
 const PORT = 3000;
 
-// URL base da API Flask do INPE
-// Docs: http://queimadas.dgi.inpe.br/queimadas/dados-abertos/
-const INPE_API = "https://queimadas.dgi.inpe.br/api/focos";
+// URL base com os CSV de 10 minutos
+const LIST_URL = "https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/10min/";
 
-// Rota para buscar focos ativos no Brasil
-app.get("/fires/brasil", async (req, res) => {
+async function getLatestCsvUrl() {
+  const html = await fetch(LIST_URL).then(r => r.text());
+
+  // procura por arquivos CSV no HTML
+  const matches = [...html.matchAll(/href="(focos_10min_\d{8}_\d{4}\.csv)"/g)].map(m => m[1]);
+
+  if (!matches.length) throw new Error("Nenhum CSV encontrado no diretório do INPE.");
+
+  // pega o último (mais recente) arquivo listado
+  const latestFile = matches[matches.length - 1];
+  return new URL(latestFile, LIST_URL).toString();
+}
+
+app.get("/fires/recents", async (req, res) => {
   try {
-    // Exemplo: pegar os focos ativos das últimas 48h
-    // (há parâmetros como: pais, bioma, estado, satélite etc.)
-    const url = `${INPE_API}?pais=BRASIL&horas=48`;
+    const url = await getLatestCsvUrl();
+    const csv = await fetch(url).then(r => r.text());
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Erro na API do INPE: ${response.status}`);
-    }
+    // transforma em JSON (opcional)
+    const rows = csv.split("\n").map(line => line.split(";"));
+    const headers = rows.shift();
+    const json = rows
+      .filter(r => r.length === headers.length) // garante que não entre linha vazia
+      .map(row =>
+        Object.fromEntries(row.map((val, i) => [headers[i], val]))
+      );
 
-    const data = await response.json();
-
-    // Retorna direto o JSON para o app mobile
     res.json({
-      fonte: "INPE - BDQueimadas",
-      total_focos: data.length,
-      focos: data,
+      fonte: "INPE - Queimadas (últimos 10 min)",
+      arquivo: url,
+      total_registros: json.length,
+      dados: json,
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: `Erro ao buscar dados do INPE: ${err}`  });
+    res.status(500).json({ error: "Falha ao buscar CSV do INPE" });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+  console.log(`✅ Servidor rodando em http://localhost:${PORT}`);
 });
