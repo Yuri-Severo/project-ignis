@@ -51,7 +51,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white">
+<body class="bg-white-500 text-white">
     <div id="app" class="min-h-screen">
         <!-- Header -->
         <header class="bg-red-800 shadow-lg">
@@ -77,41 +77,41 @@
         <!-- Stats Dashboard -->
         <div class="container mx-auto px-4 py-6">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                <div class="stats-card rounded-lg p-6 text-gray-800">
+                <div class="stats-card rounded-lg p-6 bg-red-800 text-white-800">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600">Total de Focos</p>
-                            <p id="totalFires" class="text-2xl font-bold text-red-600">-</p>
+                            <p class="text-sm font-medium text-white">Total de Focos</p>
+                            <p id="totalFires" class="text-2xl font-bold text-white">-</p>
                         </div>
                         <div class="text-red-500 text-3xl">🔥</div>
                     </div>
                 </div>
                 
-                <div class="stats-card rounded-lg p-6 text-gray-800">
+                <div class="stats-card rounded-lg p-6 bg-red-800 text-white-800">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600">Confiança Média</p>
-                            <p id="avgConfidence" class="text-2xl font-bold text-blue-600">-</p>
+                            <p class="text-sm font-medium text-white">Confiança Média</p>
+                            <p id="avgConfidence" class="text-2xl font-bold text-white">-</p>
                         </div>
                         <div class="text-blue-500 text-3xl">📊</div>
                     </div>
                 </div>
                 
-                <div class="stats-card rounded-lg p-6 text-gray-800">
+                <div class="stats-card rounded-lg p-6 bg-red-800 text-white-800">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600">Potência Média</p>
-                            <p id="avgFrp" class="text-2xl font-bold text-orange-600">-</p>
+                            <p class="text-sm font-medium text-white">Potência Média</p>
+                            <p id="avgFrp" class="text-2xl font-bold text-white">-</p>
                         </div>
                         <div class="text-orange-500 text-3xl">⚡</div>
                     </div>
                 </div>
                 
-                <div class="stats-card rounded-lg p-6 text-gray-800">
+                <div class="stats-card rounded-lg p-6 bg-red-800 text-white-800">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600">Última Atualização</p>
-                            <p id="lastUpdate" class="text-sm font-bold text-green-600">-</p>
+                            <p class="text-sm font-medium text-white">Última Atualização</p>
+                            <p id="lastUpdate" class="text-sm font-bold text-white">-</p>
                         </div>
                         <div class="text-green-500 text-3xl">🕒</div>
                     </div>
@@ -119,12 +119,12 @@
             </div>
 
             <!-- Filtros -->
-            <div class="bg-gray-800 rounded-lg p-6 mb-6">
+            <div class="bg-red-800 rounded-lg p-6 mb-6">
                 <h3 class="text-lg font-semibold mb-4">Filtros</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-2">Fonte do Satélite</label>
-                        <select id="sourceFilter" class="w-full p-2 bg-gray-700 rounded-lg border border-gray-600">
+                        <select id="sourceFilter" class="w-full p-2 bg-white text-black rounded-lg border border-gray-600">
                             <option value="">Todas as fontes</option>
                             <option value="MODIS_NRT">MODIS Near Real-Time</option>
                             <option value="VIIRS_SNPP_NRT">VIIRS Suomi-NPP</option>
@@ -135,8 +135,8 @@
                     <div>
                         <label class="block text-sm font-medium mb-2">Confiança Mínima (%)</label>
                         <input type="range" id="confidenceFilter" min="0" max="100" value="0" 
-                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                               class="w-full h-2 bg-white rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between text-xs text-white mt-1">
                             <span>0%</span>
                             <span id="confidenceValue">0%</span>
                             <span>100%</span>
@@ -145,7 +145,7 @@
                     
                     <div>
                         <label class="block text-sm font-medium mb-2">Período (horas)</label>
-                        <select id="timeFilter" class="w-full p-2 bg-gray-700 rounded-lg border border-gray-600">
+                        <select id="timeFilter" class="w-full p-2 bg-white rounded-lg border text-black">
                             <option value="6">Últimas 6 horas</option>
                             <option value="12">Últimas 12 horas</option>
                             <option value="24" selected>Últimas 24 horas</option>
@@ -180,7 +180,7 @@
             constructor() {
                 this.map = null;
                 this.fireLayer = null;
-                this.apiUrl = 'http://localhost:8000'; // Ajuste conforme necessário
+                this.apiUrl = ''; // Ajuste conforme necessário
                 this.refreshInterval = null;
                 
                 this.init();
@@ -258,13 +258,13 @@
                     
                     // Buscar dados de queimadas
                     const fireResponse = await fetch(`${this.apiUrl}/api/fires/geojson?${params}`);
-                    if (!fireResponse.ok) throw new Error('Erro ao carregar dados de queimadas');
+                    //if (!fireResponse.ok) throw new Error('Erro ao carregar dados de queimadas');
                     
                     const fireData = await fireResponse.json();
                     
                     // Buscar estatísticas
                     const statsResponse = await fetch(`${this.apiUrl}/api/fires/stats`);
-                    if (!statsResponse.ok) throw new Error('Erro ao carregar estatísticas');
+                    //if (!statsResponse.ok) throw new Error('Erro ao carregar estatísticas');
                     
                     const stats = await statsResponse.json();
                     
