@@ -22,7 +22,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Cache para armazenar dados em memória
+
+def safe_int(value, default=0):
+    """Converte valor para int de forma segura"""
+    try:
+        if isinstance(value, (int, float)):
+            return int(value)
+        if isinstance(value, str):
+            # Remove espaços e tenta converter
+            return int(float(value.strip()))
+        return default
+    except (ValueError, TypeError, AttributeError):
+        return default
+
+
+def safe_float(value, default=0.0):
+    """Converte valor para float de forma segura"""
+    try:
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            return float(value.strip())
+        return default
+    except (ValueError, TypeError, AttributeError):
+        return default
 
 
 # Endpoints da API    
