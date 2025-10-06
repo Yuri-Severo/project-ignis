@@ -111,12 +111,20 @@ async def get_fire_stats():
     # Estatísticas básicas
     total_fires = len(fires)
     
-    # Confiança média
-    confidences = [f.get('confidence', 0) for f in fires if f.get('confidence')]
+    # Confiança média - COM CONVERSÃO SEGURA
+    confidences = [
+        safe_int(f.get('confidence', 0)) 
+        for f in fires 
+        if f.get('confidence')
+    ]
     avg_confidence = sum(confidences) / len(confidences) if confidences else 0
     
-    # FRP (Fire Radiative Power) média
-    frp_values = [f.get('frp', 0) for f in fires if f.get('frp')]
+    # FRP (Fire Radiative Power) média - COM CONVERSÃO SEGURA
+    frp_values = [
+        safe_float(f.get('frp', 0)) 
+        for f in fires 
+        if f.get('frp')
+    ]
     avg_frp = sum(frp_values) / len(frp_values) if frp_values else 0
     
     # Contagem por fonte
