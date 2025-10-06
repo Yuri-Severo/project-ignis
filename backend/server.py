@@ -151,7 +151,8 @@ async def get_fire_stats():
 @app.get("/api/fires/geojson")
 async def get_fires_geojson(
     source: Optional[str] = None,
-    min_confidence: int = 0
+    min_confidence: int = 0,
+    hours_ago: Optional[int] = None
 ):
     """Retorna dados de queimadas no formato GeoJSON para mapas"""
     
@@ -164,7 +165,29 @@ async def get_fires_geojson(
     if source:
         fires = [f for f in fires if f.get('source') == source]
     
-    fires = [f for f in fires if f.get('confidence', 0) >= min_confidence]
+    # Filtro por confiança - COM CONVERSÃO SEGURA
+    fires = [
+        f for f in fires 
+        if safe_int(f.get('confidence', 0)) >= min_confidence
+    ]
+    
+    # Filtro por tempo (se especificado)
+    if hours_ago is not None:
+        cutoff_time = datetime.now() - timedelta(hours=hours_ago)
+        filtered_fires = []
+        
+        for fire in fires:
+            try:
+                fire_datetime = datetime.strptime(
+                    f"{fire.get('acq_date')} {fire.get('acq_time')}", 
+                    "%Y-%m-%d %H%M"
+                )
+                if fire_datetime >= cutoff_time:
+                    filtered_fires.append(fire)
+            except Exception:
+                filtered_fires.append(fire)
+        
+        fires = filtered_fires
 
     # Converter para GeoJSON
     features = []
@@ -174,17 +197,20 @@ async def get_fires_geojson(
                 "type": "Feature",
                 "geometry": {
                     "type": "Point",
-                    "coordinates": [fire['longitude'], fire['latitude']]
+                    "coordinates": [
+                        safe_float(fire['longitude']), 
+                        safe_float(fire['latitude'])
+                    ]
                 },
                 "properties": {
-                    "brightness": fire.get('brightness'),
-                    "confidence": fire.get('confidence'),
-                    "frp": fire.get('frp'),
-                    "satellite": fire.get('satellite'),
-                    "source": fire.get('source'),
-                    "acq_date": fire.get('acq_date'),
-                    "acq_time": fire.get('acq_time'),
-                    "daynight": fire.get('daynight')
+                    "brightness": safe_float(fire.get('brightness')),
+                    "confidence": safe_int(fire.get('confidence')),
+                    "frp": safe_float(fire.get('frp')),
+                    "satellite": fire.get('satellite', ''),
+                    "source": fire.get('source', ''),
+                    "acq_date": fire.get('acq_date', ''),
+                    "acq_time": fire.get('acq_time', ''),
+                    "daynight": fire.get('daynight', '')
                 }
             }
             features.append(feature)
