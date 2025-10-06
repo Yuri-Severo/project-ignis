@@ -70,8 +70,11 @@ async def get_fires(
     if source:
         fires = [f for f in fires if f.get('source') == source]
     
-    # Filtro por confiança
-    fires = [f for f in fires if f.get('confidence', 0) >= min_confidence]
+    # Filtro por confiança - COM CONVERSÃO SEGURA
+    fires = [
+        f for f in fires 
+        if safe_int(f.get('confidence', 0)) >= min_confidence
+    ]
     
     # Filtro por tempo (últimas X horas)
     cutoff_time = datetime.now() - timedelta(hours=hours_ago)
@@ -86,7 +89,7 @@ async def get_fires(
             )
             if fire_datetime >= cutoff_time:
                 filtered_fires.append(fire)
-        except:
+        except Exception:
             # Se não conseguir fazer parse da data, inclui o ponto
             filtered_fires.append(fire)
     
