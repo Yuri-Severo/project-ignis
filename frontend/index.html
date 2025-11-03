@@ -180,7 +180,7 @@
             constructor() {
                 this.map = null;
                 this.fireLayer = null;
-                this.apiUrl = ''; // Ajuste conforme necessário
+                this.apiUrl = 'http://localhost:8000'; // URL da API FastAPI
                 this.refreshInterval = null;
                 
                 this.init();
@@ -258,13 +258,13 @@
                     
                     // Buscar dados de queimadas
                     const fireResponse = await fetch(`${this.apiUrl}/api/fires/geojson?${params}`);
-                    //if (!fireResponse.ok) throw new Error('Erro ao carregar dados de queimadas');
+                    if (!fireResponse.ok) throw new Error(`Erro ao carregar dados de queimadas: ${fireResponse.status}`);
                     
                     const fireData = await fireResponse.json();
                     
                     // Buscar estatísticas
                     const statsResponse = await fetch(`${this.apiUrl}/api/fires/stats`);
-                    //if (!statsResponse.ok) throw new Error('Erro ao carregar estatísticas');
+                    if (!statsResponse.ok) throw new Error(`Erro ao carregar estatísticas: ${statsResponse.status}`);
                     
                     const stats = await statsResponse.json();
                     

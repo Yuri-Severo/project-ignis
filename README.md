@@ -16,6 +16,60 @@
 
 O **Ignis** é uma aplicação web que permite o monitoramento em tempo real de queimadas na região amazônica, utilizando dados fornecidos pela **NASA FIRMS API** (Fire Information for Resource Management System). O sistema coleta dados de múltiplos satélites (MODIS e VIIRS) e disponibiliza através de uma API REST e interface de visualização em mapa interativo.
 
+## 🚀 Como Executar o Projeto
+
+### Opção 1: Execução Automática (Recomendado)
+
+```bash
+# Clone o repositório (se ainda não fez)
+git clone <url-do-repositorio>
+cd project-ignis
+
+# Execute o script que inicia tudo automaticamente
+./start_project.sh
+```
+
+Este script irá:
+- ✅ Verificar e instalar dependências automaticamente
+- ✅ Criar arquivo `.env` se necessário
+- ✅ Iniciar o backend na porta 8000
+- ✅ Iniciar o frontend na porta 3000
+- ✅ Abrir automaticamente no navegador
+
+### Opção 2: Execução Manual
+
+#### 1. Instalar Dependências
+```bash
+pip install -r requirements.txt
+```
+
+#### 2. Configurar Ambiente
+```bash
+cp .env.example .env
+```
+
+#### 3. Iniciar Backend
+```bash
+cd backend
+fastapi dev server.py
+# ou
+uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+```
+
+#### 4. Iniciar Frontend (em outro terminal)
+```bash
+python start_frontend.py
+# ou abrir diretamente: frontend/index.html
+```
+
+### 📱 Acessar a Aplicação
+
+Após iniciar os serviços:
+
+- **🌐 Frontend**: http://localhost:3000
+- **🔧 API**: http://localhost:8000  
+- **📚 Documentação**: http://localhost:8000/docs
+
 ### ✨ Funcionalidades
 
 - 🛰️ **Coleta automática de dados** de múltiplas fontes de satélite
