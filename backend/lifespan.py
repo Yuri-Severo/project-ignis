@@ -18,13 +18,100 @@ logger = logging.getLogger(__name__)
 NASA_FIRMS_BASE_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
 MAP_KEY = os.getenv("NASA_API_KEY", "SEU_MAP_KEY_AQUI")
 
-# Coordenadas da Amazônia
+# Coordenadas da Amazônia Legal Brasileira (bounding box para API NASA FIRMS)
+# A bounding box retangular é usada para requisitar dados da API
+# Porém, como é retangular, inclui partes de Bolívia, Peru e Colômbia
+# Por isso, aplicamos filtragem adicional por polígono após receber os dados
+# Abrange: AC, AM, AP, PA, RO, RR, TO, MT e MA (oeste)
 AMAZON_BOUNDS = {
-    "west": -75,
-    "south": -15,
-    "east": -45,
-    "north": 5
+    "west": -73.99,   # Fronteira oeste (Acre)
+    "south": -18.04,  # Sul do Mato Grosso
+    "east": -44.00,   # Leste do Maranhão
+    "north": 5.27     # Norte de Roraima
 }
+
+# Polígono aproximado da Amazônia Legal para filtragem precisa
+# Exclui áreas de Bolívia, Peru e Colômbia com margem de segurança
+# Coordenadas no sentido anti-horário (longitude, latitude)
+AMAZON_LEGAL_POLYGON = [
+    (-73.75, -7.35),   # Fronteira Brasil-Peru (Acre sul) - margem interna
+    (-73.50, -5.00),   # Acre-Peru com margem
+    (-73.00, -2.50),   # Amazonas oeste (margem da fronteira Peru)
+    (-72.50, -0.50),   # Amazonas noroeste
+    (-70.50, 0.00),    # Fronteira Brasil-Colômbia com margem
+    (-69.50, 1.00),    # Amazonas norte com margem
+    (-69.40, 2.00),    # Roraima oeste (fronteira Venezuela)
+    (-64.83, 2.24),    # Roraima nordeste
+    (-60.24, 5.27),    # Extremo norte (Roraima)
+    (-59.80, 4.50),    # Norte de Roraima
+    (-51.65, 4.45),    # Norte do Amapá
+    (-50.39, 1.80),    # Amapá leste
+    (-49.97, 1.70),    # Amapá costa
+    (-48.48, 1.68),    # Pará norte
+    (-44.21, -1.30),   # Maranhão nordeste
+    (-44.00, -2.80),   # Maranhão leste
+    (-44.36, -6.00),   # Maranhão sul
+    (-44.70, -9.00),   # Tocantins leste
+    (-46.05, -10.96),  # Tocantins sudeste
+    (-46.87, -12.47),  # Tocantins sul
+    (-50.09, -13.84),  # Mato Grosso leste
+    (-51.09, -14.48),  # Mato Grosso centro-leste
+    (-52.50, -15.40),  # Mato Grosso central
+    (-56.09, -17.00),  # Mato Grosso sul
+    (-57.50, -16.00),  # Mato Grosso sudoeste
+    (-59.43, -15.42),  # Mato Grosso oeste
+    (-60.11, -13.69),  # Fronteira Brasil-Bolívia (MT/RO)
+    (-64.50, -12.56),  # Rondônia sul (fronteira Bolívia) - margem
+    (-65.00, -11.01),  # Rondônia sudoeste - margem
+    (-66.50, -10.85),  # Rondônia oeste - margem
+    (-68.50, -11.15),  # Acre sul (fronteira Bolívia) - margem
+    (-69.40, -10.95),  # Acre sudoeste - margem
+    (-70.00, -9.49),   # Acre oeste - margem
+    (-72.50, -9.08),   # Acre-Peru fronteira - margem
+    (-73.75, -7.35),   # Retorna ao ponto inicial
+]
+
+def is_point_in_amazon_legal(longitude: float, latitude: float) -> bool:
+    """
+    Verifica se um ponto está dentro da Amazônia Legal usando algoritmo ray-casting.
+    
+    Este filtro é ESSENCIAL para excluir focos de queimadas de países vizinhos
+    (Bolívia, Peru e Colômbia) que são capturados pela bounding box retangular.
+    
+    O algoritmo ray-casting traça um raio horizontal a partir do ponto e conta
+    quantas vezes ele cruza as arestas do polígono. Se o número for ímpar, o
+    ponto está dentro; se for par, está fora.
+    
+    Args:
+        longitude: Longitude do ponto (coordenada X)
+        latitude: Latitude do ponto (coordenada Y)
+    
+    Returns:
+        True se o ponto está dentro do polígono da Amazônia Legal
+        False se está fora (países vizinhos ou outras regiões do Brasil)
+    
+    Nota:
+        O polígono é aproximado. Para maior precisão, use shapefile oficial do IBGE.
+        Cidades fronteiriças (ex: Iquitos/Peru, Leticia/Colômbia) podem ter margem
+        de erro de ~30-50km devido à resolução do polígono.
+    """
+    x, y = longitude, latitude
+    n = len(AMAZON_LEGAL_POLYGON)
+    inside = False
+    
+    p1x, p1y = AMAZON_LEGAL_POLYGON[0]
+    for i in range(n + 1):
+        p2x, p2y = AMAZON_LEGAL_POLYGON[i % n]
+        if y > min(p1y, p2y):
+            if y <= max(p1y, p2y):
+                if x <= max(p1x, p2x):
+                    if p1y != p2y:
+                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                    if p1x == p2x or x <= xinters:
+                        inside = not inside
+        p1x, p1y = p2x, p2y
+    
+    return inside
 
 # Cache para armazenar dados em memória
 fire_data_cache = {
@@ -126,15 +213,21 @@ class FireDataCollector:
                                 # Outros campos como string
                                 fire_data[header] = str(value).strip()
                         
-                        # Validar dados essenciais
+                        # Validar dados essenciais e filtrar por Amazônia Legal
                         if fire_data.get('latitude') and fire_data.get('longitude'):
-                            fires.append(fire_data)
+                            lat = safe_float(fire_data.get('latitude'))
+                            lon = safe_float(fire_data.get('longitude'))
+                            
+                            # Filtro: apenas pontos dentro do polígono da Amazônia Legal
+                            # Exclui focos de Bolívia, Peru e Colômbia
+                            if is_point_in_amazon_legal(lon, lat):
+                                fires.append(fire_data)
                         
                     except Exception as e:
                         logger.warning(f"Erro ao processar linha: {e}")
                         continue
                 
-                logger.info(f"{source}: {len(fires)} focos encontrados")
+                logger.info(f"{source}: {len(fires)} focos dentro da Amazônia Legal")
                 return fires
                 
         except httpx.TimeoutException:
