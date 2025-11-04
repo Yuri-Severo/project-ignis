@@ -59,7 +59,7 @@
                 <div class="flex justify-between items-center">
                     <div>
                         <h1 class="text-3xl font-bold">🔥 Monitoramento de Queimadas</h1>
-                        <p class="text-red-200">Amazônia - Dados NASA FIRMS</p>
+                        <p class="text-red-200">Amazônia Legal - Dados NASA FIRMS</p>
                     </div>
                     <div class="flex items-center space-x-4">
                         <div id="status" class="flex items-center">
@@ -195,8 +195,9 @@
             }
             
             initMap() {
-                // Inicializa o mapa centrado na Amazônia
-                this.map = L.map('map').setView([-3, -60], 5);
+                // Inicializa o mapa centrado na Amazônia Legal
+                // Centro aproximado: entre Pará e Amazonas
+                this.map = L.map('map').setView([-6.5, -58.5], 5);
                 
                 // Adiciona camadas base
                 const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
